@@ -13,6 +13,8 @@ public class Hero : MonoBehaviour
     private SpriteRenderer sprite;
     private Animator animator;
 
+    public static Hero Instance { get; set; }
+
     private States State
     {
         get { return (States)animator.GetInteger("state"); }
@@ -23,6 +25,7 @@ public class Hero : MonoBehaviour
         sprite = GetComponentInChildren<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
+        Instance = this;
     }
 
     private void Run()
@@ -33,6 +36,11 @@ public class Hero : MonoBehaviour
         sprite.flipX = dir.x < 0.0f;
     }
 
+    public void GetDamage()
+    {
+        lives--;
+        Debug.Log(lives);
+    }
     private void Jump()
     {
         rb.AddForce(transform.up * jumpForce, ForceMode2D.Impulse);

@@ -16,6 +16,8 @@ public class CameraController : MonoBehaviour
     {
         coordinate = Hero.position;
         coordinate.z = -10f;
+
+
         transform.position = Vector3.Lerp(transform.position, coordinate, Time.deltaTime);
     }
 }
