@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class thorns : MonoBehaviour
+public class thorns : Entity
 {
     private void OnCollisionEnter2D(Collision2D collision)
     {
