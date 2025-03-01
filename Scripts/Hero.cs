@@ -1,22 +1,24 @@
-using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using static UnityEditor.VersionControl.Asset;
 
 public class Hero : Entity
 {
-    [SerializeField] private float speed = 3f;
+    [SerializeField] private float speed = 3f;  
     [SerializeField] private int health;
+    [SerializeField] private int key;
     [SerializeField] private float jumpForce = 10f;
 
-    [SerializeField] private Image[] hearts;
+    [SerializeField] private float boostSpeed = 2f;  
+    [SerializeField] private float boostDuration = 3f;  
 
+    private float boostTimer = 3f;  
+    private bool isBoosting = false;  
+    private float originalSpeed; 
+
+    [SerializeField] private Image[] hearts;
     [SerializeField] private Sprite aliveHeart;
     [SerializeField] private Sprite deadHeart;
-
-
-
-
 
     private bool isGrounded = false;
 
@@ -31,14 +33,18 @@ public class Hero : Entity
         get { return (States)animator.GetInteger("state"); }
         set { animator.SetInteger("state", (int)value); }
     }
+
     private void Awake()
     {
+        key = 4;
+        keys = 0;
         lives = 3;
         health = lives;
         sprite = GetComponentInChildren<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         Instance = this;
+        originalSpeed = speed;  
     }
 
     private void Run()
@@ -51,8 +57,6 @@ public class Hero : Entity
 
     public override void GetDamage()
     {
-        lives -= 1;
-        Debug.Log(lives);
         health -= 1;
         if (health == 0)
         {
@@ -63,16 +67,22 @@ public class Hero : Entity
             Die();
         }
     }
+
+    public override void GetKey()
+    {
+        keys += 1;
+        Debug.Log(keys);
+    }
+
     private void Jump()
     {
         rb.AddForce(transform.up * jumpForce, ForceMode2D.Impulse);
     }
+
     void Start()
     {
-        
     }
 
-    
     void Update()
     {
         if (isGrounded) State = States.Idle;
@@ -94,12 +104,71 @@ public class Hero : Entity
 
         for (int i = 0; i < hearts.Length; i++)
         {
-            if (i < health) { hearts[i].sprite = aliveHeart; }
-            else { hearts[i].sprite = deadHeart; }
+            if (i < health) 
+            { 
+                hearts[i].sprite = aliveHeart; 
+            }
+            else 
+            { 
+                hearts[i].sprite = deadHeart; 
+            }
 
-            if (i < lives) { hearts[i].enabled = true; }
-            else { hearts[i].enabled = false; }
+            if (i < lives) 
+            { 
+                hearts[i].enabled = true; 
+            }
+            else 
+            { 
+                hearts[i].enabled = false; 
+            }
         }
+
+        if (keys > key)
+        {
+            SceneManager.LoadScene(1);
+        }
+
+        if (isBoosting)
+        {
+            boostTimer -= Time.deltaTime;  
+
+            if (boostTimer <= 0f)  
+            {
+                EndBoost();
+            }
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("boot"))
+        {
+            StartBoost();  
+            Destroy(collision.gameObject);  
+        }
+
+        if (collision.CompareTag("hp"))
+        {
+            health += 1;
+            Destroy(collision.gameObject);
+        }
+    }
+
+
+    private void StartBoost()
+    {
+        isBoosting = true;
+        boostTimer = boostDuration;  
+        speed *= boostSpeed;  
+
+    }
+
+    
+    private void EndBoost()
+    {
+        isBoosting = false;
+        speed = originalSpeed;  
+        Debug.Log("Boost ended!");
     }
 
     private void CheckGround()
