@@ -4,17 +4,21 @@ using UnityEngine.UI;
 
 public class Hero : Entity
 {
-    [SerializeField] private float speed = 3f;  
+    [SerializeField] private float speed = 3f;
     [SerializeField] private int health;
     [SerializeField] private int key;
     [SerializeField] private float jumpForce = 10f;
 
-    [SerializeField] private float boostSpeed = 2f;  
-    [SerializeField] private float boostDuration = 3f;  
+    [SerializeField] private float _sensetive;
 
-    private float boostTimer = 3f;  
-    private bool isBoosting = false;  
-    private float originalSpeed; 
+    [SerializeField] private float boostSpeed = 2f;
+    [SerializeField] private float boostDuration = 3f;
+
+    public Joystick joystick;
+
+    private float boostTimer = 3f;
+    private bool isBoosting = false;
+    private float originalSpeed;
 
     [SerializeField] private Image[] hearts;
     [SerializeField] private Sprite aliveHeart;
@@ -27,6 +31,8 @@ public class Hero : Entity
     private Animator animator;
 
     public static Hero Instance { get; set; }
+
+    public static int control = 1; 
 
     private States State
     {
@@ -44,15 +50,47 @@ public class Hero : Entity
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         Instance = this;
-        originalSpeed = speed;  
+        originalSpeed = speed;
+        if (SystemInfo.supportsGyroscope)
+        {
+            Input.gyro.enabled = true;
+        }
+    }
+
+    private void Move()
+    {
+        if (control == 2) 
+        {
+            if (SystemInfo.supportsGyroscope)
+            {
+                if (isGrounded) State = States.Run;
+                Vector3 dir = transform.right * Input.acceleration.x; ;
+                transform.position = Vector3.MoveTowards(transform.position, transform.position + dir, speed * Time.deltaTime);
+                sprite.flipX = dir.x < 0.0f;
+            }
+        }
     }
 
     private void Run()
     {
-        if (isGrounded) State = States.Run;
-        Vector3 dir = transform.right * Input.GetAxis("Horizontal");
-        transform.position = Vector3.MoveTowards(transform.position, transform.position + dir, speed * Time.deltaTime);
-        sprite.flipX = dir.x < 0.0f;
+        if (control == 1) 
+        {
+            if (isGrounded) State = States.Run;
+            Vector3 dir = transform.right * Input.GetAxis("Horizontal");
+            transform.position = Vector3.MoveTowards(transform.position, transform.position + dir, speed * Time.deltaTime);
+            sprite.flipX = dir.x < 0.0f;
+        }
+    }
+
+    private void RunJoystick()
+    {
+        if (control == 3) 
+        {
+            if (isGrounded) State = States.Run;
+            Vector3 dir = transform.right * joystick.Horizontal;
+            transform.position = Vector3.MoveTowards(transform.position, transform.position + dir, speed * Time.deltaTime);
+            sprite.flipX = dir.x < 0.0f;
+        }
     }
 
     public override void GetDamage()
@@ -83,18 +121,43 @@ public class Hero : Entity
     {
     }
 
+    public void OnJumpButtonDown()
+    {
+        if (isGrounded)
+        {
+            rb.AddForce(transform.up * jumpForce, ForceMode2D.Impulse);
+        }
+    }
+
     void Update()
     {
         if (isGrounded) State = States.Idle;
 
-        if (Input.GetButton("Horizontal"))
+        if (control == 1) 
         {
-            Run();
+            if (Input.GetButton("Horizontal"))
+            {
+                Run();
+            }
+
+            if (isGrounded && Input.GetButtonDown("Jump"))
+            {
+                Jump();
+            }
         }
-        if (isGrounded && Input.GetButtonDown("Jump"))
+        if (control == 2)
         {
-            Jump();
+            Move();           
         }
+
+        if (control == 3) 
+        { 
+            if (joystick.Horizontal != 0)
+            {
+                RunJoystick();
+            }
+        }
+
         CheckGround();
 
         if (health > lives)
@@ -104,22 +167,22 @@ public class Hero : Entity
 
         for (int i = 0; i < hearts.Length; i++)
         {
-            if (i < health) 
-            { 
-                hearts[i].sprite = aliveHeart; 
+            if (i < health)
+            {
+                hearts[i].sprite = aliveHeart;
             }
-            else 
-            { 
-                hearts[i].sprite = deadHeart; 
+            else
+            {
+                hearts[i].sprite = deadHeart;
             }
 
-            if (i < lives) 
-            { 
-                hearts[i].enabled = true; 
+            if (i < lives)
+            {
+                hearts[i].enabled = true;
             }
-            else 
-            { 
-                hearts[i].enabled = false; 
+            else
+            {
+                hearts[i].enabled = false;
             }
         }
 
@@ -130,9 +193,9 @@ public class Hero : Entity
 
         if (isBoosting)
         {
-            boostTimer -= Time.deltaTime;  
+            boostTimer -= Time.deltaTime;
 
-            if (boostTimer <= 0f)  
+            if (boostTimer <= 0f)
             {
                 EndBoost();
             }
@@ -143,8 +206,8 @@ public class Hero : Entity
     {
         if (collision.CompareTag("boot"))
         {
-            StartBoost();  
-            Destroy(collision.gameObject);  
+            StartBoost();
+            Destroy(collision.gameObject);
         }
 
         if (collision.CompareTag("hp"))
@@ -152,22 +215,23 @@ public class Hero : Entity
             health += 1;
             Destroy(collision.gameObject);
         }
+        if (collision.CompareTag("End"))
+        {
+            SceneManager.LoadScene(1);
+        }
     }
-
 
     private void StartBoost()
     {
         isBoosting = true;
-        boostTimer = boostDuration;  
-        speed *= boostSpeed;  
-
+        boostTimer = boostDuration;
+        speed *= boostSpeed;
     }
 
-    
     private void EndBoost()
     {
         isBoosting = false;
-        speed = originalSpeed;  
+        speed = originalSpeed;
         Debug.Log("Boost ended!");
     }
 
